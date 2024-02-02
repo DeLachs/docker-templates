@@ -1,0 +1,58 @@
+# labels for containers
+# traefik.enable=true
+# traefik.http.routers.example.entryPoints=https
+# traefik.http.routers.example.rule=Host(`www.examlpe.com`)
+# traefik.http.services.example.loadbalancer.server.port=80
+#
+# used if the service behind traefik it self uses ssl/tls
+# traefik.http.services.example.loadbalancer.server.scheme=https
+
+version: '3.2'
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    security_opt:
+      - label:disable
+    networks:
+      proxy:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./config:/etc/traefik"
+    env_file: .env
+    command:
+      - "--global.sendanonymoususage=false"
+      - "--serverstransport.insecureskipverify=true"
+      - "--api.dashboard=true"  # disable if not used and remove labels from traefik container.
+      - "--log.filePath=/var/log/traefik/traefik.log"
+      - "--log.format=common"
+      - "--log.level=INFO"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+      - "--providers.file.filename=/etc/traefik/config.yml"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.http.http.redirections.entrypoint.to=https"
+      - "--entrypoints.http.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.https.address=:443"
+      # withouth letsencrypt "default" is needed to avoid 404 on every page. even if traefik has a default cert that it delievers.
+      - "--entrypoints.https.http.tls.certResolver=letsencrypt"
+      - "--entrypoints.https.http.tls.domains[0].main=example.com"
+      - "--entrypoints.https.http.tls.domains[0].sans=*.example.com"
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=hetzner"
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=213.133.100.98:53,88.198.229.192:53,193.47.99.5:53"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme.json"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.entryPoints=https"
+      # /api is needed so that the /dashboard can work
+      - "traefik.http.routers.dashboard.rule=Host(`example.com`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+networks:
+  proxy:
+    external: true

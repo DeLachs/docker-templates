@@ -1,0 +1,21 @@
+http:
+## MIDDLEWARES ##
+  middlewares:
+    # Security headers
+    securityHeaders:
+      headers:
+        stsSeconds: 63072000
+
+    default-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - 192.168.0.0/16
+          - 172.16.0.0/12
+          - 10.0.0.0/8
+ 
+# Only use secure ciphers - https://ssl-config.mozilla.org/#server=traefik&version=2.6.0&config=modern&guideline=5.6
+tls:
+  options:
+    default:
+      minVersion: VersionTLS13
+
